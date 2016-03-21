@@ -1,7 +1,6 @@
 package fileutils
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -105,7 +104,7 @@ func ExistDir(filePath string) bool {
 }
 
 //比较两个路径是否相等
-func ComparePath(srcPath, dstPath string) bool {
+func IsSamePath(srcPath, dstPath string) bool {
 	absSrcPath, _ := filepath.Abs(srcPath)
 	absDstPath, _ := filepath.Abs(dstPath)
 	ret := strings.Compare(absSrcPath, absDstPath)
@@ -114,28 +113,6 @@ func ComparePath(srcPath, dstPath string) bool {
 	} else {
 		return false
 	}
-}
-
-//创建目录
-func Mkdir(filePath string, mode os.FileMode) error {
-	//已存在目录
-	fi, err := os.Stat(filePath)
-	if err == nil {
-		if fi.IsDir() {
-			return nil
-		} else {
-			fmt.Printf("已存在为%s的文件，非目录\n", filePath)
-			return errors.New("directory already exists")
-		}
-	}
-
-	//目录不存则创建
-	err = os.MkdirAll(filePath, mode)
-	if err != nil {
-		fmt.Printf("创建目录%s失败, error:\n", filePath, err.Error())
-		return err
-	}
-	return nil
 }
 
 //获取配置文件名

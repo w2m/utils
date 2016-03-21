@@ -22,6 +22,12 @@ func GetLocalAddr() string {
 	return (strings.Split(conn.LocalAddr().String(), ":")[0])
 }
 
+//获取外网IP
+func GetOutNetWorkIp() string {
+	ip, _ := Get("http://ip.cip.cc")
+	return strings.TrimSpace(string(ip))
+}
+
 var (
 	client *http.Client
 )

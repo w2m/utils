@@ -3,6 +3,7 @@ package stringutils
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -154,4 +155,28 @@ func Substr(str string, start, length int) string {
 	}
 
 	return string(rs[start:end])
+}
+
+//删除slice中的元素
+func RemoveSliceElement(val interface{}, index int) interface{} {
+
+	if reflect.TypeOf(val).Kind() != reflect.Slice {
+		fmt.Println("val类型非slice")
+		return nil
+	}
+
+	s := reflect.ValueOf(val)
+	if index < 0 || index >= s.Len() {
+		fmt.Println("传入参数有误")
+		return nil
+	}
+
+	prev := s.Index(index)
+	for i := index + 1; i < s.Len(); i++ {
+		value := s.Index(i)
+		prev.Set(value)
+		prev = value
+	}
+
+	return s.Slice(0, s.Len()-1).Interface()
 }
