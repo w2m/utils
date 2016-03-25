@@ -1,12 +1,15 @@
 package stringutils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math"
+	r "math/rand"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf16"
 )
 
@@ -179,4 +182,31 @@ func RemoveSliceElement(val interface{}, index int) interface{} {
 	}
 
 	return s.Slice(0, s.Len()-1).Interface()
+}
+
+// RandomCreateBytes generate random []byte by specify chars.
+func RandomCreateBytes(n int, alphabets ...byte) []byte {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	var randby bool
+	if num, err := rand.Read(bytes); num != n || err != nil {
+		r.Seed(time.Now().UnixNano())
+		randby = true
+	}
+	for i, b := range bytes {
+		if len(alphabets) == 0 {
+			if randby {
+				bytes[i] = alphanum[r.Intn(len(alphanum))]
+			} else {
+				bytes[i] = alphanum[b%byte(len(alphanum))]
+			}
+		} else {
+			if randby {
+				bytes[i] = alphabets[r.Intn(len(alphabets))]
+			} else {
+				bytes[i] = alphabets[b%byte(len(alphabets))]
+			}
+		}
+	}
+	return bytes
 }

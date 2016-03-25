@@ -1,11 +1,14 @@
 package fileutils
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -149,4 +152,71 @@ func CopyFile(src, des string) (w int64, err error) {
 //读取文件
 func ReadFile(path string) (body []byte, err error) {
 	return ioutil.ReadFile(path)
+}
+
+//获取程序运行文件的绝对路径
+func SelfPath() string {
+	path, _ := filepath.Abs(os.Args[0])
+	return path
+}
+
+//获取程序运行目录
+func SelfDir() string {
+	return filepath.Dir(SelfPath())
+}
+
+// SearchFile Search a file in paths.
+// this is often used in search config file in /etc ~/
+func SearchFile(filename string, paths ...string) (fullpath string, err error) {
+	for _, path := range paths {
+		if fullpath = filepath.Join(path, filename); Exist(fullpath) {
+			return
+		}
+	}
+	err = errors.New(fullpath + " not found in paths")
+	return
+}
+
+// GrepFile like command grep -E
+// for example: GrepFile(`^hello`, "hello.txt")
+// \n is striped while read
+func GrepFile(patten string, filename string) (lines []string, err error) {
+	re, err := regexp.Compile(patten)
+	if err != nil {
+		return
+	}
+
+	fd, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	lines = make([]string, 0)
+	reader := bufio.NewReader(fd)
+	prefix := ""
+	isLongLine := false
+	for {
+		byteLine, isPrefix, er := reader.ReadLine()
+		if er != nil && er != io.EOF {
+			return nil, er
+		}
+		if er == io.EOF {
+			break
+		}
+		line := string(byteLine)
+		if isPrefix {
+			prefix += line
+			continue
+		} else {
+			isLongLine = true
+		}
+
+		line = prefix + line
+		if isLongLine {
+			prefix = ""
+		}
+		if re.MatchString(line) {
+			lines = append(lines, line)
+		}
+	}
+	return lines, nil
 }
