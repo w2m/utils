@@ -1,8 +1,10 @@
 package stringutils
 
 import (
+	"crypto/md5"
 	"crypto/rand"
 	"fmt"
+	"io"
 	"math"
 	r "math/rand"
 	"reflect"
@@ -209,4 +211,10 @@ func RandomCreateBytes(n int, alphabets ...byte) []byte {
 		}
 	}
 	return bytes
+}
+
+func SumMd5(txtInput string) string {
+	h := md5.New()
+	io.WriteString(h, txtInput)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
