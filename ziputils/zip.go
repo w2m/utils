@@ -3,6 +3,8 @@ package ziputils
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -70,4 +72,49 @@ func ZipFile(srcPath, dstFileName string, bFlag bool) error {
 		return err
 	}
 	return nil
+}
+
+func UnZip(srcFile, dstPath string) error {
+
+	//创建一个目录
+	err := os.MkdirAll(dstPath, 0666)
+	if err != nil {
+		fmt.Println("创建目录失败, path:", dstPath, ", err:", err)
+		return err
+	}
+
+	//读取zip文件
+	cf, err := zip.OpenReader(srcFile)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer cf.Close()
+
+	for _, file := range cf.File {
+		rc, err := file.Open()
+		if err != nil {
+			fmt.Println("open file failed, err:", err)
+			return err
+		}
+		//创建目录
+		err = os.MkdirAll(filepath.Dir(filepath.Join(dstPath, file.Name)), 0666)
+		if err != nil && err != os.ErrExist {
+			fmt.Println("创建目录失败, path:", filepath.Dir(filepath.Join(dstPath, file.Name)), ", err:", err)
+			return err
+		}
+		f, err := os.Create(filepath.Join(dstPath, file.Name))
+		if err != nil {
+			fmt.Println("create file failed, err:", err)
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(f, rc)
+		if err != nil {
+			fmt.Println("copy file failed, err:", err)
+			return err
+		}
+	}
+	return nil
+
 }
