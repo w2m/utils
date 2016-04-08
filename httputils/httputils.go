@@ -3,10 +3,12 @@ package httputils
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -128,6 +130,32 @@ func DownloadUrl(fileUrl string) (filename string, content []byte, e error) {
 	}
 	content, e = ioutil.ReadAll(response.Body)
 	return
+}
+
+func DownloadUrl2File(url, fileName string) {
+	fmt.Println("Downloading", url, "to", fileName)
+
+	output, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println("Error while creating", fileName, "-", err)
+		return
+	}
+	defer output.Close()
+
+	response, err := client.Get(url)
+	if err != nil {
+		fmt.Println("Error while downloading", url, "-", err)
+		return
+	}
+	defer response.Body.Close()
+
+	n, err := io.Copy(output, response.Body)
+	if err != nil {
+		fmt.Println("Error while downloading", url, "-", err)
+		return
+	}
+
+	fmt.Println(n, "bytes downloaded.")
 }
 
 func Do(req *http.Request) (resp *http.Response, err error) {
