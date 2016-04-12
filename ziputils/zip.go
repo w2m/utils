@@ -59,6 +59,8 @@ func ZipFile(srcPath, dstFileName string, bFlag bool) error {
 
 	myzip.Close()
 
+	//先检查目录存在不存在
+	os.MkdirAll(filepath.Dir(dstFileName), 0666)
 	// 建立zip文件
 	retFile, err := os.Create(dstFileName)
 	if err != nil {
@@ -74,6 +76,7 @@ func ZipFile(srcPath, dstFileName string, bFlag bool) error {
 	return nil
 }
 
+//解压文件
 func UnZip(srcFile, dstPath string) error {
 
 	//创建一个目录
@@ -92,29 +95,42 @@ func UnZip(srcFile, dstPath string) error {
 	defer cf.Close()
 
 	for _, file := range cf.File {
+
 		rc, err := file.Open()
 		if err != nil {
 			fmt.Println("open file failed, err:", err)
 			return err
 		}
-		//创建目录
-		err = os.MkdirAll(filepath.Dir(filepath.Join(dstPath, file.Name)), 0666)
-		if err != nil && err != os.ErrExist {
-			fmt.Println("创建目录失败, path:", filepath.Dir(filepath.Join(dstPath, file.Name)), ", err:", err)
-			return err
+
+		if file.FileInfo().IsDir() {
+			//创建目录
+			err = os.MkdirAll(filepath.Join(dstPath, file.Name), 0666)
+			if err != nil && err != os.ErrExist {
+				fmt.Println("创建目录失败, path:", filepath.Dir(filepath.Join(dstPath, file.Name)), ", err:", err)
+				return err
+			}
+		} else {
+
+			//创建文件所在目录
+			err = os.MkdirAll(filepath.Dir(filepath.Join(dstPath, file.Name)), 0666)
+			if err != nil && err != os.ErrExist {
+				fmt.Println("创建目录失败, path:", filepath.Dir(filepath.Join(dstPath, file.Name)), ", err:", err)
+				return err
+			}
+			//创建文件
+			f, err := os.Create(filepath.Join(dstPath, file.Name))
+			if err != nil {
+				fmt.Println("create file failed, err:", err)
+				return err
+			}
+			defer f.Close()
+			_, err = io.Copy(f, rc)
+			if err != nil {
+				fmt.Println("copy file failed, err:", err)
+				return err
+			}
 		}
-		f, err := os.Create(filepath.Join(dstPath, file.Name))
-		if err != nil {
-			fmt.Println("create file failed, err:", err)
-			return err
-		}
-		defer f.Close()
-		_, err = io.Copy(f, rc)
-		if err != nil {
-			fmt.Println("copy file failed, err:", err)
-			return err
-		}
+
 	}
 	return nil
-
 }
