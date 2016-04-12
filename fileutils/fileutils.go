@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/w2m/utils/stringutils"
 )
 
 //获取指定目录下的所有文件，不进入下一级目录搜索，可以匹配后缀过滤。
@@ -219,4 +221,9 @@ func GrepFile(patten string, filename string) (lines []string, err error) {
 		}
 	}
 	return lines, nil
+}
+
+//获取文件名，不带后缀名
+func GetFileNameWithoutExtension(path string) string {
+	return stringutils.Substr(filepath.Base(path), 0, len([]rune(filepath.Base(path)))-len([]rune(filepath.Ext(path))))
 }
