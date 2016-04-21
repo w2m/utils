@@ -3,6 +3,7 @@ package ziputils
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -133,4 +134,141 @@ func UnZip(srcFile, dstPath string) error {
 
 	}
 	return nil
+}
+
+func WriteComment(fileName string, comment ...string) error {
+	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Println("打开文件失败, err:", err)
+		return err
+	}
+	defer f.Close()
+
+	//定位到comment长度字段，写入数据长度
+	f.Seek(0, os.SEEK_END)
+	commentList := make([]zipComment, 0, len(comment))
+	item := zipComment{}
+	for _, v := range comment {
+		item.Data = v
+		item.getLen()
+		commentList = append(commentList, item)
+	}
+	byteComment := pack(commentList...)
+	fmt.Println("comment bytes:", byteComment)
+
+	commentLen := uint16(len(byteComment))
+	fmt.Println("commentLen:", commentLen)
+
+	binary.Write(f, binary.BigEndian, commentLen)
+	f.Seek(0, os.SEEK_END)
+
+	num, err := f.Write(byteComment)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	err = binary.Write(f, binary.BigEndian, uint16(num))
+	if err != nil {
+		fmt.Println("err:", err)
+		return err
+	}
+	fmt.Println("write num:", num)
+	return nil
+}
+
+func ReadComment(fileName string) []string {
+	f, err := os.OpenFile(fileName, os.O_RDONLY, 0666)
+	if err != nil {
+		fmt.Println("打开文件失败, err:", err)
+		return make([]string, 0)
+	}
+	defer f.Close()
+
+	f.Seek(-2, os.SEEK_END)
+	var commentLen uint16
+	err = binary.Read(f, binary.BigEndian, &commentLen)
+	if err != nil {
+		fmt.Println("获取comment长度错误, err:", err)
+		return make([]string, 0)
+	}
+
+	//	fmt.Println("commentLen:", commentLen)
+
+	seekLen := int64(0) - int64(commentLen) - int64(2)
+	fmt.Println("seekLen:", seekLen)
+	f.Seek(seekLen, os.SEEK_END)
+	comment := make([]byte, commentLen)
+	num, err := f.Read(comment)
+	if err != nil {
+		fmt.Println("读取comment数据失败, err:", err)
+		return make([]string, 0)
+	}
+
+	fmt.Println("comment read len:", num)
+
+	commentData := unPack(comment)
+	fmt.Println("commentData:", commentData)
+
+	retData := make([]string, 0, len(commentData))
+	for _, v := range commentData {
+		retData = append(retData, v.Data)
+	}
+	return retData
+}
+
+type zipComment struct {
+	Data string
+	Len  uint16
+}
+
+func (this *zipComment) getLen() {
+	this.Len = uint16(len([]byte(this.Data)))
+}
+
+func pack(data ...zipComment) []byte {
+	buf := new(bytes.Buffer)
+
+	for _, v := range data {
+		err := binary.Write(buf, binary.LittleEndian, v.Len)
+		if err != nil {
+			fmt.Println(err)
+			return buf.Bytes()
+		}
+		buf.WriteString(v.Data)
+	}
+
+	return buf.Bytes()
+}
+
+func unPack(data []byte) []zipComment {
+	buf := bytes.NewReader(data)
+
+	var retData []zipComment
+
+	buf.Seek(0, os.SEEK_SET)
+	for {
+		var val zipComment
+		err := binary.Read(buf, binary.LittleEndian, &val.Len)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		item := make([]byte, val.Len)
+		num, err := buf.Read(item)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println("err:", err)
+		}
+
+		fmt.Println("num:", num)
+		val.Data = string(item)
+		retData = append(retData, val)
+	}
+	return retData
 }
