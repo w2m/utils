@@ -170,6 +170,17 @@ func WriteComment(fileName string, comment ...string) error {
 		fmt.Println("err:", err)
 		return err
 	}
+
+	//将zip包的comment字段长度修改
+	seekLen := int64(0) - int64(num) - int64(4)
+
+	var commentLen uint16 = uint16(num) + 2
+	f.Seek(seekLen, os.SEEK_END)
+	err = binary.Write(f, binary.BigEndian, commentLen)
+	if err != nil {
+		fmt.Println("err:", err)
+		return err
+	}
 	//	fmt.Println("write num:", num)
 	return nil
 }
