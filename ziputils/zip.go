@@ -137,6 +137,7 @@ func UnZip(srcFile, dstPath string) error {
 }
 
 func WriteComment(fileName string, comment ...string) error {
+	//打开文件
 	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Println("打开文件失败, err:", err)
@@ -144,8 +145,7 @@ func WriteComment(fileName string, comment ...string) error {
 	}
 	defer f.Close()
 
-	//定位到comment长度字段，写入数据长度
-	f.Seek(0, os.SEEK_END)
+	//将要写入的comment进行字节序列化
 	commentList := make([]zipComment, 0, len(comment))
 	item := zipComment{}
 	for _, v := range comment {
@@ -154,29 +154,28 @@ func WriteComment(fileName string, comment ...string) error {
 		commentList = append(commentList, item)
 	}
 	byteComment := pack(commentList...)
-	fmt.Println("comment bytes:", byteComment)
+	//	fmt.Println("comment bytes:", byteComment)
 
-	commentLen := uint16(len(byteComment))
-	fmt.Println("commentLen:", commentLen)
-
-	binary.Write(f, binary.BigEndian, commentLen)
 	f.Seek(0, os.SEEK_END)
 
+	//写入comment字节流
 	num, err := f.Write(byteComment)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	//写入comment长度 2字节
 	err = binary.Write(f, binary.BigEndian, uint16(num))
 	if err != nil {
 		fmt.Println("err:", err)
 		return err
 	}
-	fmt.Println("write num:", num)
+	//	fmt.Println("write num:", num)
 	return nil
 }
 
 func ReadComment(fileName string) []string {
+	//打开文件
 	f, err := os.OpenFile(fileName, os.O_RDONLY, 0666)
 	if err != nil {
 		fmt.Println("打开文件失败, err:", err)
@@ -184,7 +183,10 @@ func ReadComment(fileName string) []string {
 	}
 	defer f.Close()
 
+	//定位到comment长度字节流的位置
 	f.Seek(-2, os.SEEK_END)
+
+	//获取comment长度
 	var commentLen uint16
 	err = binary.Read(f, binary.BigEndian, &commentLen)
 	if err != nil {
@@ -194,20 +196,24 @@ func ReadComment(fileName string) []string {
 
 	//	fmt.Println("commentLen:", commentLen)
 
+	//定位到comment字节流的开始位置
 	seekLen := int64(0) - int64(commentLen) - int64(2)
-	fmt.Println("seekLen:", seekLen)
 	f.Seek(seekLen, os.SEEK_END)
+
+	//读取comment字节流
 	comment := make([]byte, commentLen)
-	num, err := f.Read(comment)
+	//	num, err := f.Read(comment)
+	_, err = f.Read(comment)
 	if err != nil {
 		fmt.Println("读取comment数据失败, err:", err)
 		return make([]string, 0)
 	}
 
-	fmt.Println("comment read len:", num)
+	//	fmt.Println("comment read len:", num)
 
+	//解析comment字节流
 	commentData := unPack(comment)
-	fmt.Println("commentData:", commentData)
+	//	fmt.Println("commentData:", commentData)
 
 	retData := make([]string, 0, len(commentData))
 	for _, v := range commentData {
@@ -216,6 +222,7 @@ func ReadComment(fileName string) []string {
 	return retData
 }
 
+//comment单元素结构
 type zipComment struct {
 	Data string
 	Len  uint16
@@ -225,6 +232,7 @@ func (this *zipComment) getLen() {
 	this.Len = uint16(len([]byte(this.Data)))
 }
 
+//comment元素字节序列化
 func pack(data ...zipComment) []byte {
 	buf := new(bytes.Buffer)
 
@@ -240,6 +248,7 @@ func pack(data ...zipComment) []byte {
 	return buf.Bytes()
 }
 
+//comment元素字节反序列化
 func unPack(data []byte) []zipComment {
 	buf := bytes.NewReader(data)
 
@@ -258,15 +267,17 @@ func unPack(data []byte) []zipComment {
 		}
 
 		item := make([]byte, val.Len)
-		num, err := buf.Read(item)
+		//		num, err := buf.Read(item)
+		_, err = buf.Read(item)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			fmt.Println("err:", err)
-		}
 
-		fmt.Println("num:", num)
+			fmt.Println("err:", err)
+			return make([]zipComment, 0)
+		}
+		//		fmt.Println("num:", num)
 		val.Data = string(item)
 		retData = append(retData, val)
 	}
