@@ -136,7 +136,8 @@ func UnZip(srcFile, dstPath string) error {
 	return nil
 }
 
-func WriteComment(fileName string, comment ...string) error {
+//对zip文件写入注释
+func WriteComment(fileName string, comment string) error {
 	//打开文件
 	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
 	if err != nil {
@@ -145,152 +146,25 @@ func WriteComment(fileName string, comment ...string) error {
 	}
 	defer f.Close()
 
-	//将要写入的comment进行字节序列化
-	commentList := make([]zipComment, 0, len(comment))
-	item := zipComment{}
-	for _, v := range comment {
-		item.Data = v
-		item.getLen()
-		commentList = append(commentList, item)
-	}
-	byteComment := pack(commentList...)
-	//	fmt.Println("comment bytes:", byteComment)
-
 	f.Seek(0, os.SEEK_END)
 
 	//写入comment字节流
-	num, err := f.Write(byteComment)
+	num, err := f.Write([]byte(comment))
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	//写入comment长度 2字节
-	err = binary.Write(f, binary.BigEndian, uint16(num))
-	if err != nil {
-		fmt.Println("err:", err)
-		return err
-	}
 
 	//将zip包的comment字段长度修改
-	seekLen := int64(0) - int64(num) - int64(4)
+	seekLen := int64(0) - int64(num) - int64(2)
 
-	var commentLen uint16 = uint16(num) + 2
+	var commentLen uint16 = uint16(num)
 	f.Seek(seekLen, os.SEEK_END)
-	err = binary.Write(f, binary.BigEndian, commentLen)
+	err = binary.Write(f, binary.LittleEndian, commentLen)
 	if err != nil {
 		fmt.Println("err:", err)
 		return err
 	}
 	//	fmt.Println("write num:", num)
 	return nil
-}
-
-func ReadComment(fileName string) []string {
-	//打开文件
-	f, err := os.OpenFile(fileName, os.O_RDONLY, 0666)
-	if err != nil {
-		fmt.Println("打开文件失败, err:", err)
-		return make([]string, 0)
-	}
-	defer f.Close()
-
-	//定位到comment长度字节流的位置
-	f.Seek(-2, os.SEEK_END)
-
-	//获取comment长度
-	var commentLen uint16
-	err = binary.Read(f, binary.BigEndian, &commentLen)
-	if err != nil {
-		fmt.Println("获取comment长度错误, err:", err)
-		return make([]string, 0)
-	}
-
-	//	fmt.Println("commentLen:", commentLen)
-
-	//定位到comment字节流的开始位置
-	seekLen := int64(0) - int64(commentLen) - int64(2)
-	f.Seek(seekLen, os.SEEK_END)
-
-	//读取comment字节流
-	comment := make([]byte, commentLen)
-	//	num, err := f.Read(comment)
-	_, err = f.Read(comment)
-	if err != nil {
-		fmt.Println("读取comment数据失败, err:", err)
-		return make([]string, 0)
-	}
-
-	//	fmt.Println("comment read len:", num)
-
-	//解析comment字节流
-	commentData := unPack(comment)
-	//	fmt.Println("commentData:", commentData)
-
-	retData := make([]string, 0, len(commentData))
-	for _, v := range commentData {
-		retData = append(retData, v.Data)
-	}
-	return retData
-}
-
-//comment单元素结构
-type zipComment struct {
-	Data string
-	Len  uint16
-}
-
-func (this *zipComment) getLen() {
-	this.Len = uint16(len([]byte(this.Data)))
-}
-
-//comment元素字节序列化
-func pack(data ...zipComment) []byte {
-	buf := new(bytes.Buffer)
-
-	for _, v := range data {
-		err := binary.Write(buf, binary.LittleEndian, v.Len)
-		if err != nil {
-			fmt.Println(err)
-			return buf.Bytes()
-		}
-		buf.WriteString(v.Data)
-	}
-
-	return buf.Bytes()
-}
-
-//comment元素字节反序列化
-func unPack(data []byte) []zipComment {
-	buf := bytes.NewReader(data)
-
-	var retData []zipComment
-
-	buf.Seek(0, os.SEEK_SET)
-	for {
-		var val zipComment
-		err := binary.Read(buf, binary.LittleEndian, &val.Len)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-
-		item := make([]byte, val.Len)
-		//		num, err := buf.Read(item)
-		_, err = buf.Read(item)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-
-			fmt.Println("err:", err)
-			return make([]zipComment, 0)
-		}
-		//		fmt.Println("num:", num)
-		val.Data = string(item)
-		retData = append(retData, val)
-	}
-	return retData
 }
