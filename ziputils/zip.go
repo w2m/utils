@@ -146,7 +146,34 @@ func WriteComment(fileName string, comment string) error {
 	}
 	defer f.Close()
 
-	f.Seek(0, os.SEEK_END)
+	/////////////////////////////////
+	// 查找标示comment长度的字节位置
+	///////////////////////////////
+	//只读取后面1k的数据
+	f.Seek(-1024, os.SEEK_END)
+
+	fileData, err := ioutil.ReadAll(f)
+	if err != nil {
+		fmt.Println("读取文件失败, err:", err)
+		return err
+	}
+
+	index := bytes.Index(fileData, []byte{0x50, 0x4B, 0x05, 0x06})
+	//定位到comment长度的字节位置
+	commentIndex := index + 20
+
+	//获取comment的长度
+	commentData := []byte(fileData[commentIndex:])
+	buf := bytes.NewBuffer(commentData)
+	var Len uint16
+	err = binary.Read(buf, binary.LittleEndian, &Len)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Comment Len:", Len)
+	seekLen := int64(0) - int64(Len)
+	f.Seek(seekLen, os.SEEK_END)
 
 	//写入comment字节流
 	num, err := f.Write([]byte(comment))
@@ -156,10 +183,10 @@ func WriteComment(fileName string, comment string) error {
 	}
 
 	//将zip包的comment字段长度修改
-	seekLen := int64(0) - int64(num) - int64(2)
+	seekLen = int64(0) - int64(num) - int64(2)
 
 	var commentLen uint16 = uint16(num)
-	f.Seek(seekLen, os.SEEK_END)
+	f.Seek(seekLen, os.SEEK_CUR)
 	err = binary.Write(f, binary.LittleEndian, commentLen)
 	if err != nil {
 		fmt.Println("err:", err)
