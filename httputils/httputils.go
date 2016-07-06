@@ -2,6 +2,7 @@ package httputils
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -163,7 +163,7 @@ func Do(req *http.Request) (resp *http.Response, err error) {
 }
 
 // Convert uint to net.IP
-func InetNtoa(ipnr int64) net.IP {
+func InetNtoa(ipnr uint32) net.IP {
 	var bytes [4]byte
 	bytes[0] = byte(ipnr & 0xFF)
 	bytes[1] = byte((ipnr >> 8) & 0xFF)
@@ -174,20 +174,22 @@ func InetNtoa(ipnr int64) net.IP {
 }
 
 // Convert net.IP to int64
-func InetAton(ipnr net.IP) int64 {
-	bits := strings.Split(ipnr.String(), ".")
+func InetAton(ipnr net.IP) uint32 {
 
-	b0, _ := strconv.Atoi(bits[0])
-	b1, _ := strconv.Atoi(bits[1])
-	b2, _ := strconv.Atoi(bits[2])
-	b3, _ := strconv.Atoi(bits[3])
+	//	bits := strings.Split(ipnr.String(), ".")
 
-	var sum int64
+	//	b0, _ := strconv.Atoi(bits[0])
+	//	b1, _ := strconv.Atoi(bits[1])
+	//	b2, _ := strconv.Atoi(bits[2])
+	//	b3, _ := strconv.Atoi(bits[3])
 
-	sum += int64(b0) << 24
-	sum += int64(b1) << 16
-	sum += int64(b2) << 8
-	sum += int64(b3)
+	//	var sum int64
 
-	return sum
+	//	sum += int64(b0) << 24
+	//	sum += int64(b1) << 16
+	//	sum += int64(b2) << 8
+	//	sum += int64(b3)
+
+	//	return sum
+	return binary.BigEndian.Uint32([]byte(ipnr.To4()))
 }

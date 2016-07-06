@@ -14,28 +14,43 @@
 
 package utils
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestMail(t *testing.T) {
-	config := `{"username":"359851485@qq.com","password":"Aizhu1218","host":"smtp.qq.com","port":587}`
+//func TestMail(t *testing.T) {
+//	config := `{"username":"359851485@qq.com","password":"Aizhu1218","host":"smtp.qq.com","port":587}`
+//	mail := NewEMail(config)
+//	if mail.Username != "359851485@qq.com" {
+//		t.Fatal("email parse get username error")
+//	}
+//	if mail.Password != "Aizhu1218" {
+//		t.Fatal("email parse get password error")
+//	}
+//	if mail.Host != "smtp.qq.com" {
+//		t.Fatal("email parse get host error")
+//	}
+//	if mail.Port != 587 {
+//		t.Fatal("email parse get port error")
+//	}
+//	mail.To = []string{"wwm86@126.com"}
+//	mail.From = "Bigwish<359851485@qq.com>"
+//	mail.Subject = "hi, just from beego! normal"
+//	mail.Text = "Text Body is, of course, supported!"
+//	//	mail.HTML = "<h1>Fancy Html is supported, too!</h1>"
+//	mail.AttachFile("./safemap.go")
+//	mail.Send()
+//}
+
+func TestSendUsingTLS(t *testing.T) {
+	config := `{"username":"support@oceanelec.cn","password":"Ocean123","host":"smtp.exmail.qq.com","port":465}`
 	mail := NewEMail(config)
-	if mail.Username != "359851485@qq.com" {
-		t.Fatal("email parse get username error")
-	}
-	if mail.Password != "Aizhu1218" {
-		t.Fatal("email parse get password error")
-	}
-	if mail.Host != "smtp.qq.com" {
-		t.Fatal("email parse get host error")
-	}
-	if mail.Port != 587 {
-		t.Fatal("email parse get port error")
-	}
+
 	mail.To = []string{"wwm86@126.com"}
-	mail.From = "Bigwish<359851485@qq.com>"
-	mail.Subject = "hi, just from beego!"
-	mail.Text = "Text Body is, of course, supported!"
+
+	mail.Subject = "hi, just from test!"
+	mail.Text = "Text Body is, of course, supported! ssl"
 	//	mail.HTML = "<h1>Fancy Html is supported, too!</h1>"
 	mail.AttachFile("./safemap.go")
-	mail.Send()
+	mail.SendUsingTLS()
 }

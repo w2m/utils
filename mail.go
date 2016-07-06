@@ -16,6 +16,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -341,4 +342,67 @@ func base64Wrap(w io.Writer, b []byte) {
 		out = append(out, "\r\n"...)
 		w.Write(out)
 	}
+}
+
+// SendUsingTLS will send out the mail using TLS
+func (e *Email) SendUsingTLS() error {
+	if e.Auth == nil {
+		e.Auth = smtp.PlainAuth(e.Identity, e.Username, e.Password, e.Host)
+	}
+
+	to := make([]string, 0, len(e.To)+len(e.Cc)+len(e.Bcc))
+	to = append(append(append(to, e.To...), e.Cc...), e.Bcc...)
+	// Check to make sure there is at least one recipient and one "From" address
+	if e.From == "" || len(to) == 0 {
+		return errors.New("Must specify at least one From address and one To address")
+	}
+	from, err := mail.ParseAddress(e.From)
+	if err != nil {
+		return err
+	}
+	e.From = from.String()
+	raw, err := e.Bytes()
+	if err != nil {
+		return err
+	}
+
+	conn, err := tls.Dial("tcp", e.Host+":"+strconv.Itoa(e.Port), nil)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	c, err := smtp.NewClient(conn, e.Host)
+	if err != nil {
+		return err
+	}
+
+	if e.Auth != nil {
+		if ok, _ := c.Extension("AUTH"); ok {
+			if err = c.Auth(e.Auth); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err = c.Mail(from.Address); err != nil {
+		return err
+	}
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	return c.Quit()
 }
