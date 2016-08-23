@@ -3,6 +3,7 @@ package stringutils
 import (
 	"crypto/md5"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"math"
@@ -189,4 +190,14 @@ func SumMd5(txtInput string) string {
 	h := md5.New()
 	io.WriteString(h, txtInput)
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+//生成Guid字串
+func GetGuid() string {
+	b := make([]byte, 48)
+
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		return ""
+	}
+	return SumMd5(base64.URLEncoding.EncodeToString(b))
 }
